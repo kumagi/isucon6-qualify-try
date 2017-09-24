@@ -252,16 +252,11 @@ def htmlify(content, keyword_list):
     return re.sub(re.compile("\n"), "<br />", result)
 
 def load_stars(keyword):
-    #origin = config('isutar_origin')
-    #url = "%s/stars" % origin
-    #url = "http://localhost:5001/stars"
-    #params = urllib.parse.urlencode({'keyword': keyword})
+    if keyword == None or keyword == "":
+      return keyword
     cur = dbh().cursor()
-    cur.execute('SELECT * FROM star WHERE keyword = %s', keyword ))
-    res = jsonify(stars = cur.fetchall())
-
-    data = json.loads(res.read().decode('utf-8'))
-    return data['stars']
+    cur.execute('SELECT * FROM star WHERE keyword = %s', (keyword, ))
+    return cur.fetchall()
 
 def is_spam_contents(content):
     with urllib.request.urlopen(http://localhost:5050, urllib.parse.urlencode({ "content": content }).encode('utf-8')) as res:

@@ -89,7 +89,7 @@ def authenticate(func):
 def get_initialize():
     cur = dbh().cursor()
     cur.execute('DELETE FROM entry WHERE id > 7101')
-    origin = config('isutar_origin')
+    origin = http://localhost:5050
     urllib.request.urlopen(origin + '/initialize')
     return jsonify(result = 'ok')
 
@@ -249,14 +249,17 @@ def htmlify(content, keywords):
 def load_stars(keyword):
     #origin = config('isutar_origin')
     #url = "%s/stars" % origin
-    url = "http://localhost:5001/stars"
-    params = urllib.parse.urlencode({'keyword': keyword})
-    with urllib.request.urlopen(url + "?%s" % params) as res:
-        data = json.loads(res.read().decode('utf-8'))
-        return data['stars']
+    #url = "http://localhost:5001/stars"
+    #params = urllib.parse.urlencode({'keyword': keyword})
+    cur = dbh().cursor()
+    cur.execute('SELECT * FROM star WHERE keyword = %s', keyword ))
+    res = jsonify(stars = cur.fetchall())
+
+    data = json.loads(res.read().decode('utf-8'))
+    return data['stars']
 
 def is_spam_contents(content):
-    with urllib.request.urlopen(config('isupam_origin'), urllib.parse.urlencode({ "content": content }).encode('utf-8')) as res:
+    with urllib.request.urlopen(http://localhost:5050, urllib.parse.urlencode({ "content": content }).encode('utf-8')) as res:
         data = json.loads(res.read().decode('utf-8'))
         return not data['valid']
 

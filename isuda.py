@@ -12,7 +12,7 @@ import string
 import urllib
 
 static_folder = pathlib.Path(__file__).resolve().parent.parent / 'public'
-app = Flask(__name__) #, static_folder = str(static_folder), static_url_path='')
+app = Flask(__name__ , static_folder = str(static_folder), static_url_path='')
 
 app.secret_key = 'tonymoris'
 
@@ -245,8 +245,9 @@ def htmlify(content):
     return re.sub(re.compile("\n"), "<br />", result)
 
 def load_stars(keyword):
-    origin = config('isutar_origin')
-    url = "%s/stars" % origin
+    #origin = config('isutar_origin')
+    #url = "%s/stars" % origin
+    url = "http://localhost:5001/stars"
     params = urllib.parse.urlencode({'keyword': keyword})
     with urllib.request.urlopen(url + "?%s" % params) as res:
         data = json.loads(res.read().decode('utf-8'))

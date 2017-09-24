@@ -12,8 +12,8 @@ import string
 import urllib
 
 static_folder = pathlib.Path(__file__).resolve().parent.parent / 'public'
-app = Flask(__name__ , static_folder = str(static_folder), static_url_path='')
-app.config['DEBUG'] = True
+app = Flask(__name__, static_folder = str(static_folder), static_url_path='')
+
 app.secret_key = 'tonymoris'
 
 _config = {
@@ -89,7 +89,7 @@ def authenticate(func):
 def get_initialize():
     cur = dbh().cursor()
     cur.execute('DELETE FROM entry WHERE id > 7101')
-    origin = "http://localhost:5050"
+    origin = config('isutar_origin')
     urllib.request.urlopen(origin + '/initialize')
     return jsonify(result = 'ok')
 
@@ -102,10 +102,8 @@ def get_index():
     cur = dbh().cursor()
     cur.execute('SELECT * FROM entry ORDER BY updated_at DESC LIMIT %s OFFSET %s', (PER_PAGE, PER_PAGE * (page - 1),))
     entries = cur.fetchall()
-    keywords = get_keywords()
-
     for entry in entries:
-        entry['html'] = htmlify(entry['description'], keywords)
+        entry['html'] = htmlify(entry['description'])
         entry['stars'] = load_stars(entry['keyword'])
 
     cur.execute('SELECT COUNT(*) AS count FROM entry')
@@ -202,9 +200,8 @@ def get_keyword(keyword):
     entry = cur.fetchone()
     if entry == None:
         abort(404)
-    keywords = get_keywords()
 
-    entry['html'] = htmlify(entry['description'], keywords)
+    entry['html'] = htmlify(entry['description'])
     entry['stars'] = load_stars(entry['keyword'])
     return render_template('keyword.html', entry = entry)
 
@@ -225,40 +222,20 @@ def delete_keyword(keyword):
 
     return redirect('/')
 
-def get_keywords():
+def htmlify(content):
+    if content == None or content == '':
+        return ''
+
     cur = dbh().cursor()
-    cur.execute('SELECT keyword FROM entry ORDER BY CHARACTER_LENGTH(keyword) DESC')
+    cur.execute('SELECT * FROM entry ORDER BY CHARACTER_LENGTH(keyword) DESC')
     keywords = cur.fetchall()
-    keyword_re = re.compile("(%s)" % '|'.join([re.escape(k['keyword']) for k in keywords]))
-    return keyword_re
-    
-def mkbr(text):
-    return re.sub(re.compile("\n"), "<br />", text)
-
-def htmlify(content, keyword_list):
-    if content == None or content == '':
-        return ''
-
-    def replace_keyword(m):
-        kw = m.group(0)
-        return "<a href=\"{l}\">{t}</a>".format(l = url_for('get_keyword',
-                                                            keyword = html.escape(kw)),
-                                                t = kw)
-    return mkbr(re.sub(keyword_list, replace_keyword, content))
-    
-def htmlify_old(content, keyword_list):
-    # memo(kumagi): keyword_list is something like "(KEY1)|(KEY2)|(KEY3)..."
-    if content == None or content == '':
-        return ''
-
+    keyword_re = re.compile("(%s)" % '|'.join([ re.escape(k['keyword']) for k in keywords]))
     kw2sha = {}
     def replace_keyword(m):
-        if m.group(0) in kw2sha:
-            return kw2sha[m.group(0)]
         kw2sha[m.group(0)] = "isuda_%s" % hashlib.sha1(m.group(0).encode('utf-8')).hexdigest()
         return kw2sha[m.group(0)]
 
-    result = re.sub(keyword_list, replace_keyword, content)
+    result = re.sub(keyword_re, replace_keyword, content)
     result = html.escape(result)
     for kw, hash in kw2sha.items():
         url = url_for('get_keyword', keyword = kw)
@@ -268,23 +245,15 @@ def htmlify_old(content, keyword_list):
     return re.sub(re.compile("\n"), "<br />", result)
 
 def load_stars(keyword):
-    #origin = config('isutar_origin')
-    #url = "%s/stars" % origin
-    #url = "http://localhost:5001/stars"
-    #params = urllib.parse.urlencode({'keyword': keyword})
-    key = str(keyword)
-    if key == None or key == "":
-      return key
-    cur = dbh().cursor()
-    cur.execute('SELECT * FROM star WHERE keyword = %s', (key, ))
-    #res = jsonify(stars = cur.fetchall())
-
-    #data = json.loads(res.read().decode('utf-8'))
-    #return data['stars']
-    return cur.fetchall()
+    origin = config('isutar_origin')
+    url = "%s/stars" % origin
+    params = urllib.parse.urlencode({'keyword': keyword})
+    with urllib.request.urlopen(url + "?%s" % params) as res:
+        data = json.loads(res.read().decode('utf-8'))
+        return data['stars']
 
 def is_spam_contents(content):
-    with urllib.request.urlopen("http://localhost:5050", urllib.parse.urlencode({ "content": content }).encode('utf-8')) as res:
+    with urllib.request.urlopen(config('isupam_origin'), urllib.parse.urlencode({ "content": content }).encode('utf-8')) as res:
         data = json.loads(res.read().decode('utf-8'))
         return not data['valid']
 

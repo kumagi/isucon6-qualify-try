@@ -102,8 +102,7 @@ def get_index():
     cur = dbh().cursor()
     cur.execute('SELECT * FROM entry ORDER BY updated_at DESC LIMIT %s OFFSET %s', (PER_PAGE, PER_PAGE * (page - 1),))
     entries = cur.fetchall()
-    cur.execute('SELECT * FROM entry ORDER BY CHARACTER_LENGTH(keyword) DESC')
-    keywords = cur.fetchall()
+    keywords = get_keywords()
 
     for entry in entries:
         entry['html'] = htmlify(entry['description'], keywords)
@@ -203,8 +202,7 @@ def get_keyword(keyword):
     entry = cur.fetchone()
     if entry == None:
         abort(404)
-    cur.execute('SELECT * FROM entry ORDER BY CHARACTER_LENGTH(keyword) DESC')
-    keywords = cur.fetchall()
+    keywords = get_keywords()
 
     entry['html'] = htmlify(entry['description'], keywords)
     entry['stars'] = load_stars(entry['keyword'])
@@ -227,17 +225,24 @@ def delete_keyword(keyword):
 
     return redirect('/')
 
-def htmlify(content, keywords):
+def get_keywords():
+    cur = dbh().cursor()
+    cur.execute('SELECT keyword FROM entry ORDER BY CHARACTER_LENGTH(keyword) DESC')
+    keywords = cur.fetchall()
+    keyword_re = re.compile("(%s)" % '|'.join([re.escape(k['keyword']) for k in keywords]))
+    return keyword_re
+
+def htmlify(content, keyword_list):
+    # memo(kumagi): keyword_list is something like "(KEY1)|(KEY2)|(KEY3)..."
     if content == None or content == '':
         return ''
 
-    keyword_re = re.compile("(%s)" % '|'.join([ re.escape(k['keyword']) for k in keywords]))
     kw2sha = {}
     def replace_keyword(m):
         kw2sha[m.group(0)] = "isuda_%s" % hashlib.sha1(m.group(0).encode('utf-8')).hexdigest()
         return kw2sha[m.group(0)]
 
-    result = re.sub(keyword_re, replace_keyword, content)
+    result = re.sub(keyword_list, replace_keyword, content)
     result = html.escape(result)
     for kw, hash in kw2sha.items():
         url = url_for('get_keyword', keyword = kw)

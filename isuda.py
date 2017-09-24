@@ -10,6 +10,7 @@ import random
 import re
 import string
 import urllib
+import memcache
 
 static_folder = pathlib.Path(__file__).resolve().parent.parent / 'public'
 app = Flask(__name__ , static_folder = str(static_folder), static_url_path='')
@@ -30,6 +31,13 @@ def config(key):
         return _config[key]
     else:
         raise "config value of %s undefined" % key
+
+def cacheh():
+    if hasatr(request, 'cache'):
+        return request.cache
+    else:
+        request.cache = memcache.Client(['127.0.0.1:11211'])
+        return request.cache
 
 def dbh():
     if hasattr(request, 'db'):
@@ -230,6 +238,8 @@ def get_keywords():
     cur.execute('SELECT keyword FROM entry ORDER BY CHARACTER_LENGTH(keyword) DESC')
     keywords = cur.fetchall()
     keyword_re = re.compile("(%s)" % '|'.join([re.escape(k['keyword']) for k in keywords]))
+    #cacheh().set('keyword_re', keyword_re)
+    #os.environ['cache_keyword_re'] = keyword_re
     return keyword_re
     
 def mkbr(text):

@@ -89,7 +89,7 @@ def authenticate(func):
 def get_initialize():
     cur = dbh().cursor()
     cur.execute('DELETE FROM entry WHERE id > 7101')
-    origin = config('isutar_origin')
+    origin = http://localhost:5050
     urllib.request.urlopen(origin + '/initialize')
     return jsonify(result = 'ok')
 
@@ -257,7 +257,7 @@ def load_stars(keyword):
     return data['stars']
 
 def is_spam_contents(content):
-    with urllib.request.urlopen(config('isupam_origin'), urllib.parse.urlencode({ "content": content }).encode('utf-8')) as res:
+    with urllib.request.urlopen(http://localhost:5050, urllib.parse.urlencode({ "content": content }).encode('utf-8')) as res:
         data = json.loads(res.read().decode('utf-8'))
         return not data['valid']
 
